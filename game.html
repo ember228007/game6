@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Поле Чудес</title>
+    <style>
+        :root {
+            --bg: #090d16;
+            --panel: #131b2e;
+            --accent: #eab308;
+            --accent-glow: rgba(234, 179, 8, 0.3);
+            --success: #22c55e;
+            --danger: #f43f5e;
+            --text: #f8fafc;
+            --muted: #64748b;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 15px;
+        }
+
+        .container {
+            background: var(--panel);
+            border: 2px solid rgba(234, 179, 8, 0.2);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+            padding: 25px;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 500px;
+            position: relative;
+            text-align: center;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, var(--accent), #ef4444);
+            border-radius: 20px 20px 0 0;
+        }
+
+        h1 {
+            color: var(--accent);
+            font-size: 1.6rem;
+            margin-top: 0;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        .question-box {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid #1e293b;
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 1rem;
+            color: #38bdf8;
+            min-height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Табло с буквами */
+        .word-board {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 25px;
+        }
+
+        .letter-slot {
+            width: 40px;
+            height: 50px;
+            background: #0f172a;
+            border: 2px solid #334155;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--accent);
+            text-transform: uppercase;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .letter-slot.revealed {
+            background: #1e293b;
+            border-color: var(--accent);
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            font-size: 0.95rem;
+            color: var(--muted);
+            margin-bottom: 20px;
+            border-top: 1px solid #1e293b;
+            border-bottom: 1px solid #1e293b;
+            padding: 10px 0;
+        }
+
+        .stats span {
+            color: var(--text);
+            font-weight: bold;
+        }
+
+        /* Виртуальная клавиатура */
+        .keyboard {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            gap: 6px;
+        }
+
+        .key-btn {
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: var(--text);
+            padding: 10px 0;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .key-btn:hover:not(:disabled) {
+            background: #334155;
+            border-color: var(--accent);
+        }
+
+        .key-btn:disabled {
+            background: #090d16;
+            color: #475569;
+            border-color: #1e293b;
+            cursor: default;
+        }
+
+        /* Модальное окно результатов */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(9, 13, 22, 0.85);
+            backdrop-filter: blur(5px);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal-content {
+            background: var(--panel);
+            border: 2px solid var(--accent);
+            box-shadow: 0 0 30px var(--accent-glow);
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 320px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .modal-content h2 {
+            color: var(--accent);
+            margin-top: 0;
+            font-size: 1.8rem;
+        }
+
+        .result-stats {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 10px;
+            padding: 12px;
+            margin: 15px 0;
+            font-size: 0.9rem;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            text-align: left;
+        }
+
+        .result-stats div {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .result-stats span {
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        .btn-restart {
+            background: linear-gradient(135deg, var(--accent), #ca8a04);
+            color: #070a12;
+            border: none;
+            width: 100%;
+            padding: 12px;
+            font-size: 1rem;
+            font-weight: 800;
+            border-radius: 10px;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 0 4px 15px var(--accent-glow);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Поле Чудес</h1>
+        
+        <div class="question-box" id="questionText">Загрузка вопроса...</div>
+
+        <div class="word-board" id="wordBoard"></div>
+
+        <div class="stats">
+            <div>Ошибки: <span id="errors">0</span> / 6</div>
+            <div>Очки: <span id="score">0</span></div>
+        </div>
+
+        <div class="keyboard" id="keyboard"></div>
+    </div>
+
+    <!-- Модальное окно результатов -->
+    <div class="modal" id="resultModal">
+        <div class="modal-content">
+            <h2 id="modalTitle">ПОБЕДА! 🎉</h2>
+            <p id="modalDesc">Вы угадали скрытое слово!</p>
+            
+            <div class="result-stats">
+                <div>Загаданное слово: <span id="resWord">СЛОВО</span></div>
+                <div>Набрано очков: <span id="resScore">0</span></div>
+                <div>Ошибок допущено: <span id="resErrors">0</span></div>
+            </div>
+
+            <button class="btn-restart" onclick="startGame()">Играть снова</button>
+        </div>
+    </div>
+
+    <script>
+        const questionsList = [
+            { question: "Вопрос: Столица нашей Родины?", answer: "МОСКВА" },
+            { question: "Вопрос: Самый большой океан на Земле?", answer: "ТИХИЙ" },
+            { question: "Вопрос: Какая планета третья от Солнца?", answer: "ЗЕМЛЯ" },
+            { question: "Вопрос: Наука о небесных телах?", answer: "АСТРОНОМИЯ" },
+            { question: "Вопрос: Главный музыкальный инструмент композитора?", answer: "РОЯЛЬ" },
+            { question: "Вопрос: Природное явление, вспышка света в небе при грозе?", answer: "МОЛНИЯ" }
+        ];
+
+        let currentQuestion = {};
+        let guessedLetters = new Set();
+        let errors = 0;
+        let score = 0;
+        const maxErrors = 6;
+
+        const questionEl = document.getElementById('questionText');
+        const wordBoardEl = document.getElementById('wordBoard');
+        const errorsEl = document.getElementById('errors');
+        const scoreEl = document.getElementById('score');
+        const keyboardEl = document.getElementById('keyboard');
+        
+        const modal = document.getElementById('resultModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalDesc = document.getElementById('modalDesc');
+        const resWord = document.getElementById('resWord');
+        const resScore = document.getElementById('resScore');
+        const resErrors = document.getElementById('resErrors');
+
+        // Web Audio API звуковой движок
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            let now = audioCtx.currentTime;
+
+            if (type === 'click') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.exponentialRampToValueAtTime(200, now + 0.05);
+                gain.gain.setValueAtTime(0.05, now);
+                gain.gain.linearRampToValueAtTime(0.001, now + 0.05);
+                osc.start(now);
+                osc.stop(now + 0.05);
+            } else if (type === 'correct') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(523.25, now);
+                osc.frequency.setValueAtTime(659.25, now + 0.1);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.linearRampToValueAtTime(0.001, now + 0.2);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            } else if (type === 'wrong') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.linearRampToValueAtTime(100, now + 0.15);
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.linearRampToValueAtTime(0.001, now + 0.15);
+                osc.start(now);
+                osc.stop(now + 0.15);
+            } else if (type === 'win') {
+                let notes = [523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((freq, index) => {
+                    let o = audioCtx.createOscillator();
+                    let g = audioCtx.createGain();
+                    o.connect(g);
+                    g.connect(audioCtx.destination);
+                    o.frequency.setValueAtTime(freq, now + index * 0.1);
+                    g.gain.setValueAtTime(0.12, now + index * 0.1);
+                    g.gain.linearRampToValueAtTime(0.001, now + index * 0.1 + 0.15);
+                    o.start(now + index * 0.1);
+                    o.stop(now + index * 0.1 + 0.15);
+                });
+            } else if (type === 'lose') {
+                let notes = [300, 250, 200, 150];
+                notes.forEach((freq, index) => {
+                    let o = audioCtx.createOscillator();
+                    let g = audioCtx.createGain();
+                    o.connect(g);
+                    g.connect(audioCtx.destination);
+                    o.frequency.setValueAtTime(freq, now + index * 0.12);
+                    g.gain.setValueAtTime(0.1, now + index * 0.12);
+                    g.gain.linearRampToValueAtTime(0.001, now + index * 0.12 + 0.15);
+                    o.start(now + index * 0.12);
+                    o.stop(now + index * 0.12 + 0.15);
+                });
+            }
+        }
+
+        function startGame() {
+            modal.style.display = 'none';
+            errors = 0;
+            score = 0;
+            guessedLetters.clear();
+            
+            errorsEl.textContent = errors;
+            scoreEl.textContent = score;
+
+            // Выбираем случайный вопрос
+            currentQuestion = questionsList[Math.floor(Math.random() * questionsList.length)];
+            questionEl.textContent = currentQuestion.question;
+
+            renderBoard();
+            renderKeyboard();
+        }
+
+        function renderBoard() {
+            wordBoardEl.innerHTML = '';
+            for (let char of currentQuestion.answer) {
+                const slot = document.createElement('div');
+                slot.className = 'letter-slot';
+                if (guessedLetters.has(char)) {
+                    slot.textContent = char;
+                    slot.classList.add('revealed');
+                } else {
+                    slot.textContent = '';
+                }
+                wordBoardEl.appendChild(slot);
+            }
+        }
+
+        function renderKeyboard() {
+            keyboardEl.innerHTML = '';
+            const alphabet = "АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";
+            
+            for (let char of alphabet) {
+                const btn = document.createElement('button');
+                btn.className = 'key-btn';
+                btn.textContent = char;
+                if (guessedLetters.has(char)) {
+                    btn.disabled = true;
+                }
+                btn.onclick = () => handleGuess(char, btn);
+                keyboardEl.appendChild(btn);
+            }
+        }
+
+        function handleGuess(char, btn) {
+            guessedLetters.add(char);
+            btn.disabled = true;
+            playSound('click');
+
+            if (currentQuestion.answer.includes(char)) {
+                playSound('correct');
+                // Считаем сколько раз буква встречается в слове
+                let count = [...currentQuestion.answer].filter(c => c === char).length;
+                score += count * 100;
+                scoreEl.textContent = score;
+
+                renderBoard();
+
+                // Проверка на победу
+                let won = [...currentQuestion.answer].every(c => guessedLetters.has(c));
+                if (won) {
+                    endGame(true);
+                }
+            } else {
+                playSound('wrong');
+                errors++;
+                errorsEl.textContent = errors;
+
+                if (errors >= maxErrors) {
+                    endGame(false);
+                }
+            }
+        }
+
+        function endGame(isWin) {
+            if (isWin) {
+                playSound('win');
+                modalTitle.textContent = "ПОБЕДА! 🎉";
+                modalDesc.textContent = "Вы полностью угадали секретное слово!";
+            } else {
+                playSound('lose');
+                modalTitle.textContent = "ПОРАЖЕНИЕ 😢";
+                modalDesc.textContent = "Вы исчерпали все попытки.";
+                // Открываем все буквы при проигрыше
+                for (let char of currentQuestion.answer) {
+                    guessedLetters.add(char);
+                }
+                renderBoard();
+            }
+
+            resWord.textContent = currentQuestion.answer;
+            resScore.textContent = score;
+            resErrors.textContent = errors;
+            modal.style.display = 'flex';
+        }
+
+        // Запуск при старте
+        startGame();
+    </script>
+</body>
+</html>
